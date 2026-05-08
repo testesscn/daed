@@ -1,0 +1,59 @@
+name: Build Latest daed
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - goarch: amd64
+          - goarch: arm64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Build Web UI
+        run: |
+          pnpm install
+          pnpm build
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install Build Deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-15 llvm-15 make gcc-aarch64-linux-gnu
+
+      - name: Compile daed Binary
+        run: |
+          export CLANG=clang-15
+          export GOOS=linux
+          export GOARCH=${{ matrix.goarch }}
+          if [ "${{ matrix.goarch }}" = "arm64" ]; then
+            export CC=aarch64-linux-gnu-gcc
+          fi
+          make daed
+          mkdir artifacts
+          mv daed ./artifacts/daed-linux-${{ matrix.goarch }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daed-latest-${{ matrix.goarch }}
+          path: ./artifacts/
