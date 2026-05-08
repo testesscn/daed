@@ -2,7 +2,7 @@ OUTPUT ?= daed
 APPNAME ?= daed
 VERSION ?= 0.0.0.unknown
 
-.PHONY: submodules submodule
+.PHONY: submodules submodule dist
 
 daed:
 

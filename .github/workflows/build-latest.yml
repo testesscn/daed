@@ -41,8 +41,6 @@ jobs:
           - goarch: arm64
           - goarch: arm
             goarm: 7
-          - goarch: mipsle
-          - goarch: mips
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +61,7 @@ jobs:
       - name: Install Build Deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-15 llvm-15 make
+          sudo apt-get install -y clang-15 llvm-15 libelf-dev make
 
       - name: Compile daed Binary
         run: |
