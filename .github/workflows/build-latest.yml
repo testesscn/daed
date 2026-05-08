@@ -6,32 +6,54 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: Build Web UI
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm build
+      - name: Upload Web Dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist/
+
+  build-daed:
+    needs: build-web
     strategy:
       matrix:
         include:
           - goarch: amd64
             goamd64: v1
           - goarch: amd64
+            goamd64: v2
+          - goarch: amd64
             goamd64: v3
+          - goarch: amd64
+            goamd64: v4
           - goarch: arm64
+          - goarch: arm
+            goarm: 7
+          - goarch: mipsle
+          - goarch: mips
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - uses: actions/setup-node@v4
+      - name: Download Web Dist
+        uses: actions/download-artifact@v4
         with:
-          node-version: 20
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Build Web UI
-        run: |
-          pnpm install --no-frozen-lockfile
-          pnpm build
+          name: web-dist
+          path: dist/
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -41,7 +63,7 @@ jobs:
       - name: Install Build Deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-15 llvm-15 make gcc-aarch64-linux-gnu
+          sudo apt-get install -y clang-15 llvm-15 make
 
       - name: Compile daed Binary
         run: |
@@ -49,19 +71,22 @@ jobs:
           export GOOS=linux
           export GOARCH=${{ matrix.goarch }}
           export GOAMD64=${{ matrix.goamd64 || 'v1' }}
-          if [ "${{ matrix.goarch }}" = "arm64" ]; then
-            export CC=aarch64-linux-gnu-gcc
-          fi
-          make daed
+          export GOARM=${{ matrix.goarm || '' }}
+          export CGO_ENABLED=0
+          VERSION=$(git rev-parse --short HEAD)
+          make daed VERSION=$VERSION SKIP_WEB_BUILD=1 SKIP_SUBMODULES=1
+          
           mkdir artifacts
           SUFFIX=""
           if [ "${{ matrix.goarch }}" = "amd64" ]; then
             SUFFIX="-${{ matrix.goamd64 }}"
+          elif [ "${{ matrix.goarch }}" = "arm" ]; then
+            SUFFIX="v${{ matrix.goarm }}"
           fi
           mv daed ./artifacts/daed-linux-${{ matrix.goarch }}${SUFFIX}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: daed-latest-${{ matrix.goarch }}${{ matrix.goamd64 && format('-{0}', matrix.goamd64) || '' }}
+          name: daed-latest-${{ matrix.goarch }}${{ matrix.goamd64 && format('-{0}', matrix.goamd64) || '' }}${{ matrix.goarm && format('v{0}', matrix.goarm) || '' }}
           path: ./artifacts/

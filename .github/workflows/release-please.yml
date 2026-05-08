@@ -188,7 +188,10 @@ jobs:
           - goos: linux
             goarch: amd64
             goamd64: v3
-          # END Linux AMD64 v1 v2 v3
+          - goos: linux
+            goarch: amd64
+            goamd64: v4
+          # END Linux AMD64 v1 v2 v3 v4
 
           # BEGIN Linux mips
           - goos: linux

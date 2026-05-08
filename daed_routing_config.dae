@@ -1,0 +1,42 @@
+# 1. 本地基础设施豁免 (最高优先级)
+# 确保 DNS 服务器 (AdGuardHome) 不被劫持，防止 DNS 环路导致全家断网
+sip(192.168.31.22) -> must_direct
+# 确保系统网络管理服务直连，防止配置冲突
+pname(NetworkManager, systemd-resolved, dnsmasq) -> must_direct
+
+# 2. 特殊设备定向路由
+# 针对特定硬件 MAC 地址（如电视、打印机等）强制直连，不走代理
+mac('BC:24:11:10:F0:7B') -> direct
+mac('3a:2c:1c:ba:16:4e') -> direct
+
+# 3.局域网与私有地址绕过
+# 确保访问路由器后台、NAS、内网设备时不经过代理，提升响应速度
+dip(geoip:private) -> direct
+
+# 4. 个人常用域名与特定业务分流 (White List)
+# 将你自己的域名、特定的群晖服务、查 IP 接口等设置为直连
+domain(oeee.cc, *.oeee.cc) -> direct
+domain(yyyo.top, *.yyyo.top, suffix: yyyo.top) -> direct
+domain(lyger.xyz, *.lyger.xyz, suffix: lyger.xyz) -> direct
+domain(aihuishou.com, *.aihuishou.com) -> direct
+domain(paijitang.com, *.paijitang.com, suffix: paijitang.com) -> direct
+domain(zxinc.org, *.zxinc.org, suffix: zxinc.org) -> direct
+domain(synology.com, synology.me, quickconnect.to) -> direct
+# IP 检测服务直连，确保显示的是你的真实外网 IP
+domain(checkip.dyndns.org, checkipv6.dyndns.org, checkip.synology.com) -> direct
+domain(ifconfig.co, api.myip.com, ip-api.com, ipapi.co, ip6.seeip.org, members.3322.org) -> direct
+
+# 5. 强制代理规则 (强制让 DNS 服务器走代理，防止被墙或污染)
+# 确保发往 Cloudflare DNS 的流量通过代理，保证 DNS 解析质量
+dip(1.1.1.1, 1.0.0.1) -> proxy
+
+# 6. 国内地理位置分流 (Geo Data)
+# 基于数据库判断：中国域名和中国 IP 强制直连，节省代理流量并降低延迟
+domain(geosite:cn) -> direct
+dip(geoip:cn) -> direct
+# 补充：特定需要直连的固定服务器 IP
+dip(118.126.91.144, 54.169.123.78, 8.219.158.5) -> direct
+
+# 7. 默认兜底策略
+# 所有未匹配到上方规则的流量（通常是国外网站/服务）全部走代理组
+fallback: proxy

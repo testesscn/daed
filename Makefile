@@ -40,13 +40,17 @@ PFLAGS ?=
 ifeq (,$(wildcard ./.git))
 	PFLAGS += HUSKY=0
 endif
-dist: package.json pnpm-lock.yaml
-	$(PFLAGS) pnpm i
+dist:
+ifdef SKIP_WEB_BUILD
+	@echo "Skipping web build"
+else
+	pnpm i
 	TURBO_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1 pnpm build
 	@if [ -d "apps/web/dist" ]; then \
 		rm -rf dist; \
 		cp -r apps/web/dist dist; \
 	fi
+endif
 ## End Web
 
 ## Begin Bundle
