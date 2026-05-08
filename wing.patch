@@ -1,0 +1,55 @@
+diff --git a/Makefile b/Makefile
+index 9f3f7b9..04c60ab 100644
+--- a/Makefile
++++ b/Makefile
+@@ -7,6 +7,7 @@ OUTPUT ?= ./dae-wing
+ APPNAME ?= dae-wing
+ DESCRIPTION ?= $(APPNAME) is a integration solution of dae, API and UI.
+ VERSION ?= 0.0.0.unknown
++CGO_ENABLED ?= 0
+ GO_LDFLAGS := '-s -w -X github.com/daeuniverse/dae-wing/db.AppVersion=$(VERSION) -X github.com/daeuniverse/dae-wing/db.AppName=$(APPNAME) -X "github.com/daeuniverse/dae-wing/db.AppDescription=$(DESCRIPTION)" $(GO_LDFLAGS)'
+ 
+ include functions.mk
+@@ -53,7 +54,7 @@ $(DAE_READY): .gitmodules $(DAE_EBPF_SRC)
+ 	touch $@
+ 
+ dae-wing: deps
+-	go build -o $(OUTPUT) $(BUILD_ARGS) .
++	CGO_ENABLED=$(CGO_ENABLED) go build -o $(OUTPUT) $(BUILD_ARGS) .
+ .PHONY: dae-wing
+ 
+ bundle: deps
+@@ -64,13 +65,13 @@ bundle: deps
+ 		find webrender/web -type f -size +4k ! -name "*.gz" ! -name "*.woff"  ! -name "*.woff2" -exec sh -c '\
+ 			echo "{}"; \
+ 			gzip -9 -k "{}"; \
+-			if [ $$(stat -c %s "{}") \< $$(stat -c %s "{}".gz) ]; then \
++			if [ $$(stat -c %s "{}") -lt $$(stat -c %s "{}".gz) ]; then \
+ 				rm "{}".gz; \
+ 			else \
+ 				rm "{}"; \
+ 			fi' ';' ; \
+ 	fi && \
+-	go build -tags=embedallowed -o $(OUTPUT) -trimpath -ldflags=$(GO_LDFLAGS) .
++	CGO_ENABLED=$(CGO_ENABLED) go build -tags=embedallowed -o $(OUTPUT) -trimpath -ldflags=$(GO_LDFLAGS) .
+ .PHONY: bundle
+ 
+ fmt:
+diff --git a/dae/runtime.go b/dae/runtime.go
+index 2ab0d68..e9a2b51 100644
+--- a/dae/runtime.go
++++ b/dae/runtime.go
+@@ -40,7 +40,12 @@ func GetRuntimeOverview(windowSec int, maxPoints int) (*RuntimeOverview, error)
+ 		activeTCPConnections = ctl.ActiveTCPConnections()
+ 	}
+ 
+-	snapshot := control.SnapshotRuntimeStats(activeTCPConnections, control.DefaultUdpEndpointPool.Count(), windowSec, maxPoints)
++	var snapshot control.RuntimeStatsSnapshot
++	if ctl != nil {
++		snapshot = ctl.SnapshotRuntimeStats(windowSec, maxPoints)
++	} else {
++		snapshot = control.SnapshotRuntimeStats(activeTCPConnections, control.DefaultUdpEndpointPool.Count(), windowSec, maxPoints)
++	}
+ 
+ 	samples := make([]RuntimeTrafficSample, 0, len(snapshot.Samples))
+ 	for _, sample := range snapshot.Samples {

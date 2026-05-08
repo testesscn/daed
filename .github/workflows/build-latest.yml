@@ -53,6 +53,14 @@ jobs:
           name: web-dist
           path: dist/
 
+      - name: Apply Wing Patch
+        run: |
+          if [ -f wing.patch ]; then
+            cd wing
+            patch -p1 < ../wing.patch
+            cd ..
+          fi
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
