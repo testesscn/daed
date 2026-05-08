@@ -11,6 +11,9 @@ jobs:
       matrix:
         include:
           - goarch: amd64
+            goamd64: v1
+          - goarch: amd64
+            goamd64: v3
           - goarch: arm64
     runs-on: ubuntu-latest
     steps:
@@ -45,15 +48,20 @@ jobs:
           export CLANG=clang-15
           export GOOS=linux
           export GOARCH=${{ matrix.goarch }}
+          export GOAMD64=${{ matrix.goamd64 || 'v1' }}
           if [ "${{ matrix.goarch }}" = "arm64" ]; then
             export CC=aarch64-linux-gnu-gcc
           fi
           make daed
           mkdir artifacts
-          mv daed ./artifacts/daed-linux-${{ matrix.goarch }}
+          SUFFIX=""
+          if [ "${{ matrix.goarch }}" = "amd64" ]; then
+            SUFFIX="-${{ matrix.goamd64 }}"
+          fi
+          mv daed ./artifacts/daed-linux-${{ matrix.goarch }}${SUFFIX}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: daed-latest-${{ matrix.goarch }}
+          name: daed-latest-${{ matrix.goarch }}${{ matrix.goamd64 && format('-{0}', matrix.goamd64) || '' }}
           path: ./artifacts/
