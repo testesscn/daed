@@ -27,7 +27,7 @@ jobs:
 
       - name: Build Web UI
         run: |
-          pnpm install
+          pnpm install --no-frozen-lockfile
           pnpm build
 
       - name: Set up Go
